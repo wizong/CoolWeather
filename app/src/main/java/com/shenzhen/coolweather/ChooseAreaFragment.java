@@ -1,9 +1,13 @@
 package com.shenzhen.coolweather;
 
 import android.app.ProgressDialog;
+import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
+import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -35,13 +39,14 @@ import okhttp3.Response;
  */
 public class ChooseAreaFragment extends Fragment {
 
+    public static final String WEATHER_ID = "weather_id";
     private TextView titleViewTv;
-    private Button BackBtn;
+    private Button   BackBtn;
     private ListView chooseLv;
 
     private static final int LEVEL_PROVINCE = 340;
-    private static final int LEVEL_CITY = 137;
-    private static final int LEVEL_COUNTY = 46;
+    private static final int LEVEL_CITY     = 137;
+    private static final int LEVEL_COUNTY   = 46;
 
     private ProgressDialog progressDialog;
 
@@ -50,11 +55,11 @@ public class ChooseAreaFragment extends Fragment {
     private ArrayList<String> datas;
 
     private List<Province> provinces;
-    private List<City> cities;
-    private List<County> counties;
+    private List<City>     cities;
+    private List<County>   counties;
 
     private Province selectProvince;
-    private City selectCity;
+    private City     selectCity;
 
     private int currentLevel;
     private String baseUrl = "http://guolin.tech/api/china";
@@ -64,6 +69,7 @@ public class ChooseAreaFragment extends Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = LayoutInflater.from(getContext()).inflate(R.layout.frg_choose_area, container, false);
+
         BackBtn = (Button) view.findViewById(R.id.choose_area_btn_back);
         titleViewTv = (TextView) view.findViewById(R.id.title_view);
         chooseLv = (ListView) view.findViewById(R.id.choose_area_list);
@@ -77,6 +83,9 @@ public class ChooseAreaFragment extends Fragment {
     public void onActivityCreated(@Nullable Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
         chooseLv.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+
+            private String weatherId;
+
             @Override
             public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
                 if (currentLevel == LEVEL_PROVINCE) {
@@ -87,6 +96,23 @@ public class ChooseAreaFragment extends Fragment {
                     queryCounty();
                 } else if (currentLevel == LEVEL_COUNTY) {
                     Toast.makeText(getContext(), "你选中的是：" + counties.get(i).getCountyName(), Toast.LENGTH_SHORT).show();
+                    weatherId = counties.get(i).getWeatherId();
+
+                    if (!TextUtils.isEmpty(weatherId)) {
+                        SharedPreferences        sp = PreferenceManager.getDefaultSharedPreferences(getContext());
+                        SharedPreferences.Editor ed = sp.edit().putString(WEATHER_ID, weatherId);
+                        ed.apply();
+                    }
+                    if (getActivity() instanceof MainActivity) {
+                        Intent intent = new Intent(getActivity(), WeatherActivity.class);
+                        intent.putExtra(WEATHER_ID, weatherId);
+                        startActivity(intent);
+                        getActivity().finish();
+                    } else if (getActivity() instanceof WeatherActivity){
+                        ((WeatherActivity) getActivity()).drawerLayout.closeDrawers();
+                        ((WeatherActivity) getActivity()).swipeRefresh.setRefreshing(true);
+                        ((WeatherActivity) getActivity()).requestWeather(weatherId);
+                    }
                 }
             }
         });
@@ -119,6 +145,7 @@ public class ChooseAreaFragment extends Fragment {
             queryForServer(baseUrl, "province");
         }
     }
+
     private void queryCity() {
         titleViewTv.setText(selectProvince.getProvinceName());
         BackBtn.setVisibility(View.VISIBLE);
@@ -136,6 +163,7 @@ public class ChooseAreaFragment extends Fragment {
             queryForServer(api, "city");
         }
     }
+
     private void queryCounty() {
         titleViewTv.setText(selectCity.getCityName());
         BackBtn.setVisibility(View.VISIBLE);
@@ -171,6 +199,7 @@ public class ChooseAreaFragment extends Fragment {
             @Override
             public void onResponse(Call call, Response response) throws IOException {
                 String result = response.body().string();
+
                 boolean isResult = false;
                 if ("province".equals(type)) {
                     isResult = Utility.handleProvinceResponse(result);
