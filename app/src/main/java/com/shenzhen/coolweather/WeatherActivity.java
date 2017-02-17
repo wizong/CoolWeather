@@ -1,5 +1,6 @@
 package com.shenzhen.coolweather;
 
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
@@ -20,6 +21,7 @@ import android.widget.Toast;
 import com.bumptech.glide.Glide;
 import com.shenzhen.coolweather.bean.Forecast;
 import com.shenzhen.coolweather.bean.Weather;
+import com.shenzhen.coolweather.service.AutoServeice;
 import com.shenzhen.coolweather.utils.HttpUtil;
 import com.shenzhen.coolweather.utils.Utility;
 
@@ -78,17 +80,17 @@ public class WeatherActivity extends AppCompatActivity {
         setContentView(R.layout.activity_weather);
         ButterKnife.bind(this);
 
-        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
-        String            spWeather   = preferences.getString(WEATHER, null);
-        String            bing_pic    = preferences.getString("bing_pic", null);
+        final SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
+        String                  spWeather   = preferences.getString(WEATHER, null);
+        String                  bing_pic    = preferences.getString("bing_pic", null);
         if (!TextUtils.isEmpty(bing_pic)) {
             Glide.with(this).load(bing_pic).into(bingPicImg);
         } else {
             loadImg();
         }
-        weatherId = getIntent().getStringExtra("weather_id");
         if (TextUtils.isEmpty(spWeather)) {
             weatherLayout.setVisibility(View.INVISIBLE);
+            weatherId = getIntent().getStringExtra("weather_id");
             if (!TextUtils.isEmpty(weatherId)) {
                 requestWeather(weatherId);
             }
@@ -101,6 +103,7 @@ public class WeatherActivity extends AppCompatActivity {
         swipeRefresh.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
             @Override
             public void onRefresh() {
+                weatherId = preferences.getString("weather_id", null);
                 if (!TextUtils.isEmpty(weatherId)) {
                     requestWeather(weatherId);
                 } else {
@@ -146,6 +149,12 @@ public class WeatherActivity extends AppCompatActivity {
     }
 
     private void showWeather(Weather weather) {
+        if (weather != null && "ok".equals(weather.status)) {
+            Intent intent = new Intent(this, AutoServeice.class);
+            startService(intent);
+        } else {
+            Toast.makeText(WeatherActivity.this, "获取天气失败", Toast.LENGTH_SHORT).show();
+        }
         String cityName    = weather.basic.cityName;
         String updateTime  = weather.basic.update.updateTime.split(" ")[1];
         String degree      = weather.now.temperature + "℃";
