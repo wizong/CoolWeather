@@ -9,6 +9,7 @@ import android.os.IBinder;
 import android.os.SystemClock;
 import android.preference.PreferenceManager;
 import android.text.TextUtils;
+import android.widget.Toast;
 
 import com.shenzhen.coolweather.bean.Weather;
 import com.shenzhen.coolweather.utils.HttpUtil;
@@ -61,6 +62,8 @@ public class AutoServeice extends Service {
                 HttpUtil.sendOkHttpRequest(api, new Callback() {
                     @Override
                     public void onFailure(Call call, IOException e) {
+                        e.printStackTrace();
+                        Toast.makeText(AutoServeice.this, "服务异常", Toast.LENGTH_SHORT).show();
                     }
 
                     @Override
